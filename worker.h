@@ -14,7 +14,7 @@ public slots:
     void Play();
 
 signals:
-    void add(QString s);
+    void play();
 
 private:
     QString id_;

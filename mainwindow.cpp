@@ -7,8 +7,14 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->playButton, SIGNAL(clicked(bool)), this, SLOT(Play()));
+    connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::StartPlaying);
     connect(ui->pauseButton, SIGNAL(clicked(bool)), this, SLOT(Stop()));
+
+    connect(this, &MainWindow::playSignal, m_playingWorker, &Worker::Play);
+    connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
+    connect(m_playingWorker, &QThread::finished, m_playingWorker, &QObject::deleteLater);
+
+    m_playingWorker->moveToThread(&m_playingThread);
 
     m_sound = NULL;
     m_channel = 0;
@@ -30,6 +36,8 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     Clear();
+    m_playingThread.requestInterruption();
+    m_playingThread.quit();
     delete ui;
 }
 
@@ -94,6 +102,12 @@ void MainWindow::PlaySound()
     m_channel = Mix_PlayChannel(0, m_sound, 0);
 }
 
+void MainWindow::StartPlaying()
+{
+    emit playSignal();
+    m_playingThread.start();
+}
+
 void MainWindow::Play()
 {
     //m_isPlaying = true;
@@ -114,5 +128,8 @@ void MainWindow::Play()
 void MainWindow::Stop()
 {
     //m_isPlaying = false;
+    m_playingThread.requestInterruption();
     Mix_HaltChannel(-1);
+    //m_playingThread.requestInterruption();
+    m_playingThread.quit();
 }

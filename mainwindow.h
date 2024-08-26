@@ -9,6 +9,7 @@
 #include <string>
 
 #include "audio.h"
+#include "worker.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -23,8 +24,11 @@ public:
     ~MainWindow();
 
 private slots:
-    void Play();
+    //void Play();
     void Stop();
+
+signals:
+    void playSignal();
 
 private:
     Ui::MainWindow* ui;
@@ -34,8 +38,10 @@ private:
     Audio m_audioFormat;
     Mix_Chunk* m_sound;
     //bool m_isPlaying;
-    QThread playingThread;
+    QThread m_playingThread;
     int m_index;
+
+    Worker* m_playingWorker = new Worker("1", 100);
 
     bool Init();
     void SetFormat();
@@ -43,6 +49,8 @@ private:
     void LoadSounds();
     void ReadSteps();
     void PlaySound();
+    void StartPlaying();
+    void Play();
     void Clear();
 };
 #endif // MAINWINDOW_H
