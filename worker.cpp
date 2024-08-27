@@ -13,12 +13,8 @@ Worker::~Worker()
 
 void Worker::Play()
 {
-    while(true)
+    while(!(QThread::currentThread()->isInterruptionRequested()))
     {
-        if(QThread::currentThread()->isInterruptionRequested())
-        {
-            break;
-        }
         emit play();
         msleep(time_);
     }

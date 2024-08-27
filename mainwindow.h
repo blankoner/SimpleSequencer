@@ -7,6 +7,7 @@
 #include <QCheckBox>
 #include <QThread>
 #include <string>
+#include <vector>
 
 #include "audio.h"
 #include "worker.h"
@@ -33,22 +34,23 @@ signals:
 private:
     Ui::MainWindow* ui;
     int m_stepsNum;
-    int m_channel;
-    bool* m_steps;
+    int m_channels;
+    bool* m_steps0;
+    bool* m_steps1;
+    bool* m_steps2;
     Audio m_audioFormat;
-    Mix_Chunk* m_sound;
-    //bool m_isPlaying;
+    std::vector<Mix_Chunk*> m_sounds;
     QThread m_playingThread;
     int m_index;
 
-    Worker* m_playingWorker = new Worker("1", 100);
+    Worker* m_playingWorker = new Worker("1", 300);
 
     bool Init();
     void SetFormat();
     bool CreateAudioDevice();
     void LoadSounds();
     void ReadSteps();
-    void PlaySound();
+    void PlaySound(int channel);
     void StartPlaying();
     void Play();
     void Clear();
