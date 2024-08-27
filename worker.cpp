@@ -19,3 +19,8 @@ void Worker::Play()
         msleep(time_);
     }
 }
+
+void Worker::SetTime(int time_in)
+{
+    time_ = time_in;
+}

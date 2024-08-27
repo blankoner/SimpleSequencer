@@ -9,8 +9,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::StartPlaying);
     connect(ui->pauseButton, SIGNAL(clicked(bool)), this, SLOT(Stop()));
+    connect(ui->tempoBox, &QSpinBox::textChanged, this, &MainWindow::SetTempo);
 
-    connect(this, &MainWindow::playSignal, m_playingWorker, &Worker::Play);
+    connect(this, &MainWindow::PlaySignal, m_playingWorker, &Worker::Play);
     connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
     connect(m_playingWorker, &QThread::finished, m_playingWorker, &QObject::deleteLater);
 
@@ -139,9 +140,15 @@ void MainWindow::PlaySound(int channel)
     playingChannel = Mix_PlayChannel(channel, m_sounds[channel], 0);
 }
 
+void MainWindow::SetTempo()
+{
+    int tempo = ui->tempoBox->value();
+    m_playingWorker->SetTime(((double)60000/(double)tempo)/(double)2);
+}
+
 void MainWindow::StartPlaying()
 {
-    emit playSignal();
+    emit PlaySignal();
     m_playingThread.start();
 }
 

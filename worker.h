@@ -9,6 +9,7 @@ class Worker : public QThread
 public:
     explicit Worker(QString _id, int _time, QObject* parent=0);
     ~Worker();
+    void SetTime(int time_in);
 
 public slots:
     void Play();

@@ -4,9 +4,10 @@
 #include <QMainWindow>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
-#include <QCheckBox>
+//#include <QCheckBox>
+//#include <QSpinBox>
 #include <QThread>
-#include <string>
+//#include <string>
 #include <vector>
 
 #include "audio.h"
@@ -29,7 +30,7 @@ private slots:
     void Stop();
 
 signals:
-    void playSignal();
+    void PlaySignal();
 
 private:
     Ui::MainWindow* ui;
@@ -43,7 +44,7 @@ private:
     QThread m_playingThread;
     int m_index;
 
-    Worker* m_playingWorker = new Worker("1", 300);
+    Worker* m_playingWorker = new Worker("1", 333);
 
     bool Init();
     void SetFormat();
@@ -51,6 +52,7 @@ private:
     void LoadSounds();
     void ReadSteps();
     void PlaySound(int channel);
+    void SetTempo();
     void StartPlaying();
     void Play();
     void Clear();
