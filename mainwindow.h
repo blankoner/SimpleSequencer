@@ -4,10 +4,7 @@
 #include <QMainWindow>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
-//#include <QCheckBox>
-//#include <QSpinBox>
 #include <QThread>
-//#include <string>
 #include <vector>
 
 #include "audio.h"

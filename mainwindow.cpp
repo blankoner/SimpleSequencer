@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_channels = 3;
     m_sounds.reserve(m_channels);
     m_index = 0;
-    m_stepsNum = 8;
+    m_stepsNum = 16;
     m_steps0 = new bool[m_stepsNum];
     m_steps1 = new bool[m_stepsNum];
     m_steps2 = new bool[m_stepsNum];
@@ -114,6 +114,14 @@ void MainWindow::ReadSteps()
     m_steps0[5] = ui->step06->checkState();
     m_steps0[6] = ui->step07->checkState();
     m_steps0[7] = ui->step08->checkState();
+    m_steps0[8] = ui->step09->checkState();
+    m_steps0[9] = ui->step0A->checkState();
+    m_steps0[10] = ui->step0B->checkState();
+    m_steps0[11] = ui->step0C->checkState();
+    m_steps0[12] = ui->step0D->checkState();
+    m_steps0[13] = ui->step0E->checkState();
+    m_steps0[14] = ui->step0F->checkState();
+    m_steps0[15] = ui->step0G->checkState();
 
     m_steps1[0] = ui->step11->checkState();
     m_steps1[1] = ui->step12->checkState();
@@ -123,6 +131,14 @@ void MainWindow::ReadSteps()
     m_steps1[5] = ui->step16->checkState();
     m_steps1[6] = ui->step17->checkState();
     m_steps1[7] = ui->step18->checkState();
+    m_steps1[8] = ui->step19->checkState();
+    m_steps1[9] = ui->step1A->checkState();
+    m_steps1[10] = ui->step1B->checkState();
+    m_steps1[11] = ui->step1C->checkState();
+    m_steps1[12] = ui->step1D->checkState();
+    m_steps1[13] = ui->step1E->checkState();
+    m_steps1[14] = ui->step1F->checkState();
+    m_steps1[15] = ui->step1G->checkState();
 
     m_steps2[0] = ui->step21->checkState();
     m_steps2[1] = ui->step22->checkState();
@@ -132,6 +148,14 @@ void MainWindow::ReadSteps()
     m_steps2[5] = ui->step26->checkState();
     m_steps2[6] = ui->step27->checkState();
     m_steps2[7] = ui->step28->checkState();
+    m_steps2[8] = ui->step29->checkState();
+    m_steps2[9] = ui->step2A->checkState();
+    m_steps2[10] = ui->step2B->checkState();
+    m_steps2[11] = ui->step2C->checkState();
+    m_steps2[12] = ui->step2D->checkState();
+    m_steps2[13] = ui->step2E->checkState();
+    m_steps2[14] = ui->step2F->checkState();
+    m_steps2[15] = ui->step2G->checkState();
 }
 
 void MainWindow::PlaySound(int channel)

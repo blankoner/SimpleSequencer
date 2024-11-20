@@ -1,0 +1,7 @@
+QCheckBox::indicator:unchecked {
+    image: url(./icons/QCheckBox-unchecked.png);
+}
+
+QCheckBox::indicator:checked {
+    image: url(./icons/QCheckBox-checked.png);
+}
