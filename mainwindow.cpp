@@ -10,6 +10,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::StartPlaying);
     connect(ui->pauseButton, SIGNAL(clicked(bool)), this, SLOT(Stop()));
     connect(ui->tempoBox, &QSpinBox::textChanged, this, &MainWindow::SetTempo);
+    connect(ui->volDial0, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
+    connect(ui->volDial1, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
+    connect(ui->volDial2, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
+    connect(ui->volDial3, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
 
     connect(this, &MainWindow::PlaySignal, m_playingWorker, &Worker::Play);
     connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
@@ -17,13 +21,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     m_playingWorker->moveToThread(&m_playingThread);
 
-    m_channels = 3;
+    m_channels = 4;
     m_sounds.reserve(m_channels);
     m_index = 0;
     m_stepsNum = 16;
     m_steps0 = new bool[m_stepsNum];
     m_steps1 = new bool[m_stepsNum];
     m_steps2 = new bool[m_stepsNum];
+    m_steps3 = new bool[m_stepsNum];
 
     if(Init())
     {
@@ -54,7 +59,7 @@ bool MainWindow::Init()
 
 void MainWindow::Clear()
 {
-    for(int i = 0; i < 3; i++)
+    for(int i = 0; i < m_channels; i++)
     {
         Mix_FreeChunk(m_sounds[i]);
     }
@@ -63,6 +68,7 @@ void MainWindow::Clear()
     delete[] m_steps0;
     delete[] m_steps1;
     delete[] m_steps2;
+    delete[] m_steps3;
 }
 
 void MainWindow::SetFormat()
@@ -99,6 +105,12 @@ void MainWindow::LoadSounds()
 
     m_sounds[2] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/808-clap.wav");
     if(!m_sounds[2])
+    {
+        ui->errorView->setText("Error with loading sound!");
+    }
+
+    m_sounds[3] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/pad.wav");
+    if(!m_sounds[3])
     {
         ui->errorView->setText("Error with loading sound!");
     }
@@ -156,6 +168,23 @@ void MainWindow::ReadSteps()
     m_steps2[13] = ui->step2E->checkState();
     m_steps2[14] = ui->step2F->checkState();
     m_steps2[15] = ui->step2G->checkState();
+
+    m_steps3[0] = ui->step31->checkState();
+    m_steps3[1] = ui->step32->checkState();
+    m_steps3[2] = ui->step33->checkState();
+    m_steps3[3] = ui->step34->checkState();
+    m_steps3[4] = ui->step35->checkState();
+    m_steps3[5] = ui->step36->checkState();
+    m_steps3[6] = ui->step37->checkState();
+    m_steps3[7] = ui->step38->checkState();
+    m_steps3[8] = ui->step39->checkState();
+    m_steps3[9] = ui->step3A->checkState();
+    m_steps3[10] = ui->step3B->checkState();
+    m_steps3[11] = ui->step3C->checkState();
+    m_steps3[12] = ui->step3D->checkState();
+    m_steps3[13] = ui->step3E->checkState();
+    m_steps3[14] = ui->step3F->checkState();
+    m_steps3[15] = ui->step3G->checkState();
 }
 
 void MainWindow::PlaySound(int channel)
@@ -168,6 +197,34 @@ void MainWindow::SetTempo()
 {
     int tempo = ui->tempoBox->value();
     m_playingWorker->SetTime(((double)60000/(double)tempo)/(double)2);
+}
+
+void MainWindow::SetVolume(int value)
+{
+    QObject* dial = sender();
+    int channel = -1;
+
+    if(dial == ui->volDial0)
+    {
+        channel = 0;
+    }
+    else if(dial == ui->volDial1)
+    {
+        channel = 1;
+    }
+    else if(dial == ui->volDial2)
+    {
+        channel = 2;
+    }
+    else if(dial == ui->volDial3)
+    {
+        channel = 3;
+    }
+
+    if(channel != -1)
+    {
+        Mix_Volume(channel, value);
+    }
 }
 
 void MainWindow::StartPlaying()
@@ -199,6 +256,11 @@ void MainWindow::Play()
         PlaySound(2);
     }
 
+    if(m_steps3[m_index])
+    {
+        PlaySound(3);
+    }
+
     m_index++;
 }
 
@@ -208,4 +270,5 @@ void MainWindow::Stop()
     m_playingThread.requestInterruption();
     m_playingThread.quit();
     Mix_HaltChannel(-1);
+    m_index = 0;
 }

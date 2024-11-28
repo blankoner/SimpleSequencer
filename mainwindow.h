@@ -25,6 +25,7 @@ public:
 private slots:
     //void Play();
     void Stop();
+    void SetVolume(int);
 
 signals:
     void PlaySignal();
@@ -33,13 +34,11 @@ private:
     Ui::MainWindow* ui;
     int m_stepsNum;
     int m_channels;
-    bool* m_steps0;
-    bool* m_steps1;
-    bool* m_steps2;
+    bool* m_steps0, *m_steps1, *m_steps2, *m_steps3;
     Audio m_audioFormat;
     std::vector<Mix_Chunk*> m_sounds;
     QThread m_playingThread;
-    int m_index;
+    unsigned int m_index;
 
     Worker* m_playingWorker = new Worker("1", 333);
 

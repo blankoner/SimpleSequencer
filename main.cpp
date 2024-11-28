@@ -7,15 +7,8 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
-    /*
-    QFile styleSheetFile("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/stylesheets/stylesheet.qss");
-    styleSheetFile.open(QFile::ReadOnly);
-    QString styleSheet = QLatin1String(styleSheetFile.readAll());
-
-    a.setStyleSheet(styleSheet);
-    */
-
     MainWindow w;
+    w.setWindowTitle("blank Sequencer v. 0.0.1");
     w.show();
     return a.exec();
 }
