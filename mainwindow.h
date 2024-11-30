@@ -6,7 +6,8 @@
 #include <SDL2/SDL_mixer.h>
 #include <QThread>
 #include <vector>
-
+#include <QFileDialog>
+#include <QFileInfo>
 #include "audio.h"
 #include "worker.h"
 
@@ -45,12 +46,14 @@ private:
     bool Init();
     void SetFormat();
     bool CreateAudioDevice();
-    void LoadSounds();
+    void LoadBasicSounds();
     void ReadSteps();
     void PlaySound(int channel);
     void SetTempo();
     void StartPlaying();
     void Play();
     void Clear();
+    void MountTrack(unsigned int track);
+    void SetTrackName(unsigned int track, const char* name);
 };
 #endif // MAINWINDOW_H

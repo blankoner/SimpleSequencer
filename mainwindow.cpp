@@ -14,6 +14,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->volDial1, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
     connect(ui->volDial2, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
     connect(ui->volDial3, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
+    connect(ui->trackButton00, &QPushButton::clicked, this, [this](){ MountTrack(0); });
+    connect(ui->trackButton01, &QPushButton::clicked, this, [this](){ MountTrack(1); });
+    connect(ui->trackButton02, &QPushButton::clicked, this, [this](){ MountTrack(2); });
+    connect(ui->trackButton03, &QPushButton::clicked, this, [this](){ MountTrack(3); });
 
     connect(this, &MainWindow::PlaySignal, m_playingWorker, &Worker::Play);
     connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
@@ -35,7 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
         SetFormat();
         if(CreateAudioDevice())
         {
-            LoadSounds();
+            LoadBasicSounds();
         }
     }
 }
@@ -89,7 +93,7 @@ bool MainWindow::CreateAudioDevice()
     return true;
 }
 
-void MainWindow::LoadSounds()
+void MainWindow::LoadBasicSounds()
 {
     m_sounds[0] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/808-bassdrum.wav");
     if(!m_sounds[0])
@@ -271,4 +275,41 @@ void MainWindow::Stop()
     m_playingThread.quit();
     Mix_HaltChannel(-1);
     m_index = 0;
+}
+
+void MainWindow::MountTrack(unsigned int track)
+{
+    QString filePath = QFileDialog::getOpenFileName(this, tr("Open File"), "/home", tr("WAV (*.wav)"));
+
+    m_sounds[track] = Mix_LoadWAV(filePath.toStdString().c_str());
+
+    QFileInfo fileInfo(filePath);
+    QString fileName = fileInfo.baseName();
+    SetTrackName(track, fileName.toStdString().c_str());
+
+    if(!m_sounds[track])
+    {
+        ui->errorView->setText("Error with loading sound!");
+    }
+}
+
+void MainWindow::SetTrackName(unsigned int track, const char* name)
+{
+    switch(track)
+    {
+    case 0:
+        ui->trackButton00->setText(name);
+        break;
+    case 1:
+        ui->trackButton01->setText(name);
+        break;
+    case 2:
+        ui->trackButton02->setText(name);
+        break;
+    case 3:
+        ui->trackButton03->setText(name);
+        break;
+    default:
+        return;
+    }
 }

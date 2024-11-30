@@ -2,5 +2,7 @@
     <qresource prefix="/icon">
         <file>QCheckBox-checked.png</file>
         <file>QCheckBox-unchecked.png</file>
+        <file>QCheckBox-checked-current.png</file>
+        <file>QCheckBox-unchecked-current.png</file>
     </qresource>
 </RCC>
