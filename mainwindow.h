@@ -25,7 +25,9 @@ public:
 
 private slots:
     //void Play();
+    void StartPlaying();
     void Stop();
+    void SetTempo();
     void SetVolume(int);
 
 signals:
@@ -49,8 +51,6 @@ private:
     void LoadBasicSounds();
     void ReadSteps();
     void PlaySound(int channel);
-    void SetTempo();
-    void StartPlaying();
     void Play();
     void Clear();
     void MountTrack(unsigned int track);

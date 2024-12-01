@@ -7,9 +7,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    connect(ui->playButton, &QPushButton::clicked, this, &MainWindow::StartPlaying);
+    connect(ui->playButton, SIGNAL(clicked(bool)), this, SLOT(StartPlaying()));
     connect(ui->pauseButton, SIGNAL(clicked(bool)), this, SLOT(Stop()));
-    connect(ui->tempoBox, &QSpinBox::textChanged, this, &MainWindow::SetTempo);
+    connect(ui->tempoBox, SIGNAL(textChanged(QString)), this, SLOT(SetTempo()));
     connect(ui->volDial0, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
     connect(ui->volDial1, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
     connect(ui->volDial2, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
@@ -18,6 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->trackButton01, &QPushButton::clicked, this, [this](){ MountTrack(1); });
     connect(ui->trackButton02, &QPushButton::clicked, this, [this](){ MountTrack(2); });
     connect(ui->trackButton03, &QPushButton::clicked, this, [this](){ MountTrack(3); });
+    connect(ui->positionSlider, &QSlider::sliderReleased, this, [this](){ m_index = ui->positionSlider->value(); });
 
     connect(this, &MainWindow::PlaySignal, m_playingWorker, &Worker::Play);
     connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
@@ -244,6 +245,7 @@ void MainWindow::Play()
         m_index = 0;
     }
 
+    ui->positionSlider->setValue(m_index);
     ReadSteps();
     if(m_steps0[m_index])
     {
@@ -274,7 +276,8 @@ void MainWindow::Stop()
     m_playingThread.requestInterruption();
     m_playingThread.quit();
     Mix_HaltChannel(-1);
-    m_index = 0;
+    //m_index = 0;
+    //ui->positionSlider->setValue(m_index);
 }
 
 void MainWindow::MountTrack(unsigned int track)
