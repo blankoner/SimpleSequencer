@@ -1,9 +1,9 @@
 #include "worker.h"
 
-Worker::Worker(QString _id, int _time, QObject* parent):
+Worker::Worker(QString id, unsigned int time, QObject* parent) :
     QThread(parent),
-    id_(_id),
-    time_(_time)
+    m_id(id),
+    m_time(time)
 {
 }
 
@@ -11,16 +11,16 @@ Worker::~Worker()
 {
 }
 
+void Worker::SetTime(const unsigned int& time)
+{
+    m_time = time;
+}
+
 void Worker::Play()
 {
     while(!(QThread::currentThread()->isInterruptionRequested()))
     {
         emit play();
-        msleep(time_);
+        msleep(m_time);
     }
-}
-
-void Worker::SetTime(int time_in)
-{
-    time_ = time_in;
 }

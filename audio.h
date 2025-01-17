@@ -3,7 +3,8 @@
 
 #include <SDL2/SDL_stdinc.h>
 
-struct Audio {
+struct Audio
+{
 public:
     int frequency;
     Uint16 format;

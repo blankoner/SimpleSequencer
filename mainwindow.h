@@ -2,17 +2,27 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QCheckBox>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QWidget>
+#include <QPushButton>
+#include <QDial>
+#include <vector>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
-#include <QThread>
-#include <vector>
-#include <QFileDialog>
-#include <QFileInfo>
 #include "audio.h"
 #include "worker.h"
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QDebug>
+#include <QSpinBox>
+#include <QSlider>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
+namespace Ui {
+class MainWindow;
+}
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -23,37 +33,55 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-private slots:
-    //void Play();
-    void StartPlaying();
-    void Stop();
-    void SetTempo();
-    void SetVolume(int);
-
 signals:
-    void PlaySignal();
+    void startPlaying();
 
 private:
-    Ui::MainWindow* ui;
-    int m_stepsNum;
-    int m_channels;
-    bool* m_steps0, *m_steps1, *m_steps2, *m_steps3;
+    Ui::MainWindow *ui;
+
+    // variables making the layout
+    unsigned int m_width, m_height, m_expandValue, m_trackLength, m_tracksInitNum, m_tracksNum, m_tracksLimit;
+    std::vector<QCheckBox*> m_steps;
+    std::vector<QHBoxLayout*> m_tracks;
+    std::vector<QPushButton*> m_soundButtons;
+    std::vector<QDial*> m_volumeDials;
+    QVBoxLayout* mainLayout;
+    QHBoxLayout* sliderLayout, *topLayout;
+    QPushButton* addButton, *delButton, *playButton, *stopButton;
+    QSpinBox* m_bpmBox;
+    QSlider* m_posSlider;
+
+    // layout functions
+    void SetWindowProperties();
+    void AddPosSlider();
+    void SetProgramBase();
+    void AddLayout();
+    void DelLayout();
+    void ClearLayout(QLayout* layout);
+
+    // audio variables
     Audio m_audioFormat;
     std::vector<Mix_Chunk*> m_sounds;
-    QThread m_playingThread;
-    unsigned int m_index;
+    unsigned int m_playPos;
 
-    Worker* m_playingWorker = new Worker("1", 333);
-
-    bool Init();
+    // audio functions
+    bool InitSDL();
     void SetFormat();
-    bool CreateAudioDevice();
+    bool CreateDevice();
+    bool InitAudio();
     void LoadBasicSounds();
-    void ReadSteps();
-    void PlaySound(int channel);
-    void Play();
-    void Clear();
+    void PlayChannel(int channel);
     void MountTrack(unsigned int track);
-    void SetTrackName(unsigned int track, const char* name);
+    void SetTrackName(unsigned int track, QString path);
+    void Play();
+    void Stop();
+    void SetBPM();
+    void ChangeVolume(unsigned int track);
+    void SetPlayPos();
+
+    // workers
+    Worker* m_playingWorker;
+    QThread m_playingThread;
+
 };
 #endif // MAINWINDOW_H

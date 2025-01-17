@@ -4,56 +4,235 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , mainLayout(new QVBoxLayout()) // Inicjalizacja mainLayout przed użyciem
+    , sliderLayout(new QHBoxLayout())
+    , topLayout(new QHBoxLayout())
 {
     ui->setupUi(this);
 
-    connect(ui->playButton, SIGNAL(clicked(bool)), this, SLOT(StartPlaying()));
-    connect(ui->pauseButton, SIGNAL(clicked(bool)), this, SLOT(Stop()));
-    connect(ui->tempoBox, SIGNAL(textChanged(QString)), this, SLOT(SetTempo()));
-    connect(ui->volDial0, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
-    connect(ui->volDial1, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
-    connect(ui->volDial2, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
-    connect(ui->volDial3, SIGNAL(valueChanged(int)), this, SLOT(SetVolume(int)));
-    connect(ui->trackButton00, &QPushButton::clicked, this, [this](){ MountTrack(0); });
-    connect(ui->trackButton01, &QPushButton::clicked, this, [this](){ MountTrack(1); });
-    connect(ui->trackButton02, &QPushButton::clicked, this, [this](){ MountTrack(2); });
-    connect(ui->trackButton03, &QPushButton::clicked, this, [this](){ MountTrack(3); });
-    connect(ui->positionSlider, &QSlider::sliderReleased, this, [this](){ m_index = ui->positionSlider->value(); });
+    // basic window size and tracks numbers
+    m_width = 1100;
+    m_height = 100;
+    m_expandValue = 50;
+    m_trackLength = 32;
+    m_tracksInitNum = 4;
+    m_tracksNum = 0;
+    m_tracksLimit = 8;
+    m_playPos = 0;
 
-    connect(this, &MainWindow::PlaySignal, m_playingWorker, &Worker::Play);
-    connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
-    connect(m_playingWorker, &QThread::finished, m_playingWorker, &QObject::deleteLater);
-
+    m_playingWorker = new Worker("", 333);
     m_playingWorker->moveToThread(&m_playingThread);
 
-    m_channels = 4;
-    m_sounds.reserve(m_channels);
-    m_index = 0;
-    m_stepsNum = 16;
-    m_steps0 = new bool[m_stepsNum];
-    m_steps1 = new bool[m_stepsNum];
-    m_steps2 = new bool[m_stepsNum];
-    m_steps3 = new bool[m_stepsNum];
-
-    if(Init())
+    if(!InitAudio())
     {
-        SetFormat();
-        if(CreateAudioDevice())
-        {
-            LoadBasicSounds();
-        }
+        qDebug() << "Couldn't load the audio!";
     }
+
+    // Ustawienie właściwości okna, dodanie przycisku
+    SetWindowProperties();
+    SetProgramBase();
+
+    // Połączenie sygnału kliknięcia przycisku z slotem AddLayout
+    connect(addButton, &QPushButton::clicked, this, &MainWindow::AddLayout);
+    connect(delButton, &QPushButton::clicked, this, &MainWindow::DelLayout);
+
+    // Polaczenia z workerem
+    connect(playButton, &QPushButton::clicked, this, [this](){ emit startPlaying(); m_playingThread.start(); });
+    connect(stopButton, &QPushButton::clicked, this, &MainWindow::Stop);
+    connect(this, &MainWindow::startPlaying, m_playingWorker, &Worker::Play);
+    connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
+    connect(m_playingWorker, &QThread::finished, m_playingWorker, &QObject::deleteLater);
+    connect(m_bpmBox, &QSpinBox::textChanged, this, &MainWindow::SetBPM);
 }
 
 MainWindow::~MainWindow()
 {
-    Clear();
+    Mix_CloseAudio();
+    SDL_Quit();
+    delete m_playingWorker;
     m_playingThread.requestInterruption();
     m_playingThread.quit();
     delete ui;
 }
 
-bool MainWindow::Init()
+void MainWindow::SetWindowProperties()
+{
+    // Ustawienie głównego układu pionowego na centralnym widgetcie
+    ui->centralwidget->setLayout(mainLayout);
+
+    // Ustawienie rozmiaru i tytułu okna
+    setFixedSize(m_width, m_height);
+    setWindowTitle("Sequencer");
+}
+
+void MainWindow::AddPosSlider()
+{
+    m_posSlider = new QSlider(Qt::Horizontal, this);
+    m_posSlider->setValue(0);
+    m_posSlider->setMaximum(m_trackLength);
+    m_posSlider->setMinimum(0);
+    m_posSlider->setFixedWidth(840);
+    sliderLayout->addWidget(m_posSlider);
+    connect(m_posSlider, &QSlider::valueChanged, [this](){ SetPlayPos(); });
+}
+
+void MainWindow::SetProgramBase()
+{
+    // Tworzenie przyciskow z odpowiednim tekstem
+    addButton = new QPushButton("+", this);
+    addButton->setFixedSize(30, 20);
+
+    delButton = new QPushButton("-", this);
+    delButton->setFixedSize(30, 20);
+
+    playButton = new QPushButton("PLAY", this);
+    playButton->setFixedSize(50, 20);
+
+    stopButton = new QPushButton("STOP", this);
+    stopButton->setFixedSize(50, 20);
+
+    // Tworzenie BPMBoxa
+    m_bpmBox = new QSpinBox(this);
+    m_bpmBox->setMinimum(1);
+    m_bpmBox->setMaximum(360);
+    m_bpmBox->setValue(90);
+    m_bpmBox->setFixedSize(70, 20);
+
+    // Dodadnie posSlidera
+    AddPosSlider();
+    mainLayout->addLayout(sliderLayout);
+
+    // Dodanie przyciskow do głównego layoutu
+    topLayout->addWidget(addButton);
+    topLayout->addWidget(delButton);
+    topLayout->addWidget(playButton);
+    topLayout->addWidget(stopButton);
+    topLayout->addWidget(m_bpmBox);
+    mainLayout->addLayout(topLayout);
+
+    // Dodanie podstawowych trackow i wczytanie podstawowych dzwiekow
+    for(unsigned int i = 0; i < m_tracksInitNum; i++)
+    {
+        AddLayout();
+    }
+    LoadBasicSounds();
+}
+
+void MainWindow::LoadBasicSounds()
+{
+    const char* path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Kicks/Bck_K1.wav";
+    m_sounds[0] = Mix_LoadWAV(path);
+    SetTrackName(0, path);
+
+    path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Hi-Hats/Bck_H.wav";
+    m_sounds[1] = Mix_LoadWAV(path);
+    SetTrackName(1, path);
+
+    path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Snares/Bck_Snr.wav";
+    m_sounds[2] = Mix_LoadWAV(path);
+    SetTrackName(2, path);
+
+    path = "/home/marceltracz/music/ft2/SAMPLES/Blu Mar Ten - Jungle Jungle/Pads/God Chord Pad.wav";
+    m_sounds[3] = Mix_LoadWAV(path);
+    SetTrackName(3, path);
+}
+
+void MainWindow::AddLayout()
+{
+    if(m_tracksNum < m_tracksLimit)
+    {
+        // Tworzenie nowego układu poziomego
+        QHBoxLayout* newTrack = new QHBoxLayout();
+        m_tracks.push_back(newTrack);
+
+        // Tworzenie przycisku z dzwiekiem na poczatku tracku
+        QPushButton* newSoundButton = new QPushButton();
+        newSoundButton->setText("emptyTrack");
+        newSoundButton->setMaximumWidth(80);
+        newTrack->addWidget(newSoundButton);
+        m_soundButtons.push_back(newSoundButton);
+
+        // Polaczenie przycisku i jego indeksu z funkcja MountTrack
+        const int trackIndex = m_soundButtons.size() - 1;
+        connect(newSoundButton, &QPushButton::clicked, [this, trackIndex](){ this->MountTrack(trackIndex); });
+
+        // Tworzenie pojemnika na wczytanie dzwieku
+        m_sounds.push_back(NULL);
+
+        // Tworzenie krokow
+        for(unsigned int i = 0; i < m_trackLength; i++)
+        {
+            QCheckBox* step = new QCheckBox("", this);
+            m_steps.push_back(step);
+            newTrack->addWidget(step);
+        }
+
+        // Tworzenie pokretla glosnosci na koncu tracku
+        QDial* newVolumeDial = new QDial();
+        newVolumeDial->setFixedSize(40, 40);
+        newVolumeDial->setMaximum(100);
+        newVolumeDial->setMinimum(0);
+        newVolumeDial->setValue(80);
+        m_volumeDials.push_back(newVolumeDial);
+        newTrack->addWidget(newVolumeDial);
+
+        // Polaczenie pokretla i jego indexu z opcja zmiany glosnosci tracku
+        connect(newVolumeDial, &QDial::valueChanged, [trackIndex, newVolumeDial](){ Mix_Volume(trackIndex, newVolumeDial->value()); });
+
+        // Dodanie wewnętrznego układu do głównego layoutu
+        mainLayout->addLayout(newTrack);
+        m_tracksNum++;
+
+        // Rozszerzenie okna, by zmiescilo dodatkowy track
+        m_height += m_expandValue;
+        setFixedSize(m_width, m_height);
+    }
+}
+
+void MainWindow::ClearLayout(QLayout* layout)
+{
+    // getting the last layout index to clear
+    const int layoutIndex = mainLayout->indexOf(layout);
+
+    // deleting layout's button
+    delete m_soundButtons.back();
+    m_soundButtons.pop_back();
+
+    // deleting layout's step
+    for(unsigned int i = 0; i < m_trackLength; i++)
+    {
+        delete m_steps.back();
+        m_steps.pop_back();
+    }
+
+    // deleting layout's vol dial
+    delete m_volumeDials.back();
+    m_volumeDials.pop_back();
+
+    // deleting the layout from mainLayout and making the memory free
+    QLayoutItem* item = mainLayout->takeAt(layoutIndex);
+    delete item;
+
+    layout = nullptr;
+}
+
+void MainWindow::DelLayout()
+{
+    // works only if there are tracks added to mainLayout
+    if(m_tracksNum > 0)
+    {
+        ClearLayout(m_tracks.back());
+        Mix_FreeChunk(m_sounds.back());
+        m_sounds.pop_back();
+
+        // repair the window size
+        m_height -= m_expandValue;
+        setFixedSize(m_width, m_height);
+        m_tracksNum--;
+    }
+}
+
+bool MainWindow::InitSDL()
 {
     if(SDL_Init(SDL_INIT_AUDIO) < 0)
     {
@@ -62,257 +241,110 @@ bool MainWindow::Init()
     return true;
 }
 
-void MainWindow::Clear()
-{
-    for(int i = 0; i < m_channels; i++)
-    {
-        Mix_FreeChunk(m_sounds[i]);
-    }
-    Mix_CloseAudio();
-    SDL_Quit();
-    delete[] m_steps0;
-    delete[] m_steps1;
-    delete[] m_steps2;
-    delete[] m_steps3;
-}
-
 void MainWindow::SetFormat()
 {
     m_audioFormat.frequency = 44100;
     m_audioFormat.format = AUDIO_S16SYS;
-    m_audioFormat.channels = 1;
-    m_audioFormat.buffer = 512;
+    m_audioFormat.channels = 2;
+    m_audioFormat.buffer = 1024;
 }
 
-bool MainWindow::CreateAudioDevice()
+bool MainWindow::CreateDevice()
 {
     if(Mix_OpenAudio(m_audioFormat.frequency, m_audioFormat.format, m_audioFormat.channels, m_audioFormat.buffer) < 0)
     {
         return false;
     }
-    Mix_AllocateChannels(m_channels);
+    Mix_AllocateChannels(m_tracksLimit);
     return true;
 }
 
-void MainWindow::LoadBasicSounds()
+bool MainWindow::InitAudio()
 {
-    m_sounds[0] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/808-bassdrum.wav");
-    if(!m_sounds[0])
+    if(InitSDL())
     {
-        ui->errorView->setText("Error with loading sound!");
+        SetFormat();
+        if(CreateDevice())
+        {
+            return true;
+        }
     }
-
-    m_sounds[1] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/808-hihat.wav");
-    if(!m_sounds[1])
-    {
-        ui->errorView->setText("Error with loading sound!");
-    }
-
-    m_sounds[2] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/808-clap.wav");
-    if(!m_sounds[2])
-    {
-        ui->errorView->setText("Error with loading sound!");
-    }
-
-    m_sounds[3] = Mix_LoadWAV("/home/marceltracz/Projekty/audio-programming/SequencerTest/SimpleSequencer/sounds/pad.wav");
-    if(!m_sounds[3])
-    {
-        ui->errorView->setText("Error with loading sound!");
-    }
+    return false;
 }
 
-void MainWindow::ReadSteps()
+void MainWindow::PlayChannel(int channel)
 {
-    m_steps0[0] = ui->step01->checkState();
-    m_steps0[1] = ui->step02->checkState();
-    m_steps0[2] = ui->step03->checkState();
-    m_steps0[3] = ui->step04->checkState();
-    m_steps0[4] = ui->step05->checkState();
-    m_steps0[5] = ui->step06->checkState();
-    m_steps0[6] = ui->step07->checkState();
-    m_steps0[7] = ui->step08->checkState();
-    m_steps0[8] = ui->step09->checkState();
-    m_steps0[9] = ui->step0A->checkState();
-    m_steps0[10] = ui->step0B->checkState();
-    m_steps0[11] = ui->step0C->checkState();
-    m_steps0[12] = ui->step0D->checkState();
-    m_steps0[13] = ui->step0E->checkState();
-    m_steps0[14] = ui->step0F->checkState();
-    m_steps0[15] = ui->step0G->checkState();
-
-    m_steps1[0] = ui->step11->checkState();
-    m_steps1[1] = ui->step12->checkState();
-    m_steps1[2] = ui->step13->checkState();
-    m_steps1[3] = ui->step14->checkState();
-    m_steps1[4] = ui->step15->checkState();
-    m_steps1[5] = ui->step16->checkState();
-    m_steps1[6] = ui->step17->checkState();
-    m_steps1[7] = ui->step18->checkState();
-    m_steps1[8] = ui->step19->checkState();
-    m_steps1[9] = ui->step1A->checkState();
-    m_steps1[10] = ui->step1B->checkState();
-    m_steps1[11] = ui->step1C->checkState();
-    m_steps1[12] = ui->step1D->checkState();
-    m_steps1[13] = ui->step1E->checkState();
-    m_steps1[14] = ui->step1F->checkState();
-    m_steps1[15] = ui->step1G->checkState();
-
-    m_steps2[0] = ui->step21->checkState();
-    m_steps2[1] = ui->step22->checkState();
-    m_steps2[2] = ui->step23->checkState();
-    m_steps2[3] = ui->step24->checkState();
-    m_steps2[4] = ui->step25->checkState();
-    m_steps2[5] = ui->step26->checkState();
-    m_steps2[6] = ui->step27->checkState();
-    m_steps2[7] = ui->step28->checkState();
-    m_steps2[8] = ui->step29->checkState();
-    m_steps2[9] = ui->step2A->checkState();
-    m_steps2[10] = ui->step2B->checkState();
-    m_steps2[11] = ui->step2C->checkState();
-    m_steps2[12] = ui->step2D->checkState();
-    m_steps2[13] = ui->step2E->checkState();
-    m_steps2[14] = ui->step2F->checkState();
-    m_steps2[15] = ui->step2G->checkState();
-
-    m_steps3[0] = ui->step31->checkState();
-    m_steps3[1] = ui->step32->checkState();
-    m_steps3[2] = ui->step33->checkState();
-    m_steps3[3] = ui->step34->checkState();
-    m_steps3[4] = ui->step35->checkState();
-    m_steps3[5] = ui->step36->checkState();
-    m_steps3[6] = ui->step37->checkState();
-    m_steps3[7] = ui->step38->checkState();
-    m_steps3[8] = ui->step39->checkState();
-    m_steps3[9] = ui->step3A->checkState();
-    m_steps3[10] = ui->step3B->checkState();
-    m_steps3[11] = ui->step3C->checkState();
-    m_steps3[12] = ui->step3D->checkState();
-    m_steps3[13] = ui->step3E->checkState();
-    m_steps3[14] = ui->step3F->checkState();
-    m_steps3[15] = ui->step3G->checkState();
-}
-
-void MainWindow::PlaySound(int channel)
-{
-    int playingChannel = 0;
-    playingChannel = Mix_PlayChannel(channel, m_sounds[channel], 0);
-}
-
-void MainWindow::SetTempo()
-{
-    int tempo = ui->tempoBox->value();
-    m_playingWorker->SetTime(((double)60000/(double)tempo)/(double)2);
-}
-
-void MainWindow::SetVolume(int value)
-{
-    QObject* dial = sender();
-    int channel = -1;
-
-    if(dial == ui->volDial0)
+    // plays only if there is any sound loaded and if the channel is in the range of vector with sounds
+    if(m_sounds[channel] && (channel >= 0))
     {
-        channel = 0;
+        int playingChannel = 0;
+        playingChannel = Mix_PlayChannel(channel, m_sounds[channel], 0);
     }
-    else if(dial == ui->volDial1)
-    {
-        channel = 1;
-    }
-    else if(dial == ui->volDial2)
-    {
-        channel = 2;
-    }
-    else if(dial == ui->volDial3)
-    {
-        channel = 3;
-    }
-
-    if(channel != -1)
-    {
-        Mix_Volume(channel, value);
-    }
-}
-
-void MainWindow::StartPlaying()
-{
-    emit PlaySignal();
-    m_playingThread.start();
-}
-
-void MainWindow::Play()
-{
-    if(m_index == m_stepsNum)
-    {
-        m_index = 0;
-    }
-
-    ui->positionSlider->setValue(m_index);
-    ReadSteps();
-    if(m_steps0[m_index])
-    {
-        PlaySound(0);
-    }
-
-    if(m_steps1[m_index])
-    {
-        PlaySound(1);
-    }
-
-    if(m_steps2[m_index])
-    {
-        PlaySound(2);
-    }
-
-    if(m_steps3[m_index])
-    {
-        PlaySound(3);
-    }
-
-    m_index++;
-}
-
-void MainWindow::Stop()
-{
-    //m_isPlaying = false;
-    m_playingThread.requestInterruption();
-    m_playingThread.quit();
-    Mix_HaltChannel(-1);
-    //m_index = 0;
-    //ui->positionSlider->setValue(m_index);
 }
 
 void MainWindow::MountTrack(unsigned int track)
 {
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open File"), "/home", tr("WAV (*.wav)"));
 
-    m_sounds[track] = Mix_LoadWAV(filePath.toStdString().c_str());
-
-    QFileInfo fileInfo(filePath);
-    QString fileName = fileInfo.baseName();
-    SetTrackName(track, fileName.toStdString().c_str());
-
-    if(!m_sounds[track])
+    if(filePath.isEmpty())
     {
-        ui->errorView->setText("Error with loading sound!");
-    }
-}
-
-void MainWindow::SetTrackName(unsigned int track, const char* name)
-{
-    switch(track)
-    {
-    case 0:
-        ui->trackButton00->setText(name);
-        break;
-    case 1:
-        ui->trackButton01->setText(name);
-        break;
-    case 2:
-        ui->trackButton02->setText(name);
-        break;
-    case 3:
-        ui->trackButton03->setText(name);
-        break;
-    default:
+        qDebug() << "Empty filePath!";
         return;
     }
+
+    m_sounds[track] = Mix_LoadWAV(filePath.toStdString().c_str());
+
+    SetTrackName(track, filePath);
+}
+
+void MainWindow::SetTrackName(unsigned int track, QString path)
+{
+    QFileInfo fileInfo(path);
+    QString name = fileInfo.baseName();
+    m_soundButtons[track]->setText(name.toStdString().c_str());
+}
+
+void MainWindow::Play()
+{
+    if(m_playPos == m_trackLength)
+    {
+        m_playPos = 0;
+    }
+
+    m_posSlider->setValue(m_playPos);
+
+    for(unsigned int i = 0; i < m_tracksNum; i++)
+    {
+        if(m_tracks[i])
+        {
+            int playIndex = m_playPos + (i * m_trackLength);
+            if((playIndex < m_steps.size()) && (m_steps[playIndex]->isChecked()))
+            {
+                PlayChannel(i);
+            }
+        }
+    }
+
+    m_playPos++;
+}
+
+void MainWindow::Stop()
+{
+    m_playingThread.requestInterruption();
+    m_playingThread.quit();
+    Mix_HaltChannel(-1);
+    m_playPos = 0;
+    m_posSlider->setValue(m_playPos);
+}
+
+void MainWindow::SetBPM()
+{
+    // Setting BPM with "ms to BPM" mathematical formula
+    int bpm = m_bpmBox->value();
+    m_playingWorker->SetTime(((double)60000/(double)bpm)/(double)2);
+}
+
+void MainWindow::SetPlayPos()
+{
+    m_playPos = m_posSlider->value();
 }
