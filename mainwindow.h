@@ -61,6 +61,7 @@ private:
     void AddLayout();
     void DelLayout();
     void ClearLayout(QLayout* layout);
+    QDial* CreateDial(int value);
 
     // audio variables
     Audio m_audioFormat;
@@ -81,7 +82,7 @@ private:
     void Pause();
     void Stop();
     void SetBPM();
-    void ChangeVolume(unsigned int track, const QDial& volDial);
+    void ChangeVolume(unsigned int track);
     void SetPlayPos();
     void MuteTrack(unsigned int track);
     void SetPanning(unsigned int track);

@@ -51,6 +51,8 @@ MainWindow::~MainWindow()
 {
     m_playingThread.requestInterruption();
     m_playingThread.quit();
+    m_playingThread.wait();
+
     delete m_playingWorker;
     delete [] m_mutedTracks;
     Mix_CloseAudio();
@@ -160,6 +162,16 @@ void MainWindow::LoadBasicSounds()
     SetTrackName(3, path);
 }
 
+QDial* MainWindow::CreateDial(int value)
+{
+    QDial* dial = new QDial();
+    dial->setFixedSize(40, 40);
+    dial->setMaximum(100);
+    dial->setMinimum(0);
+    dial->setValue(value);
+    return dial;
+}
+
 void MainWindow::AddLayout()
 {
     if(m_tracksNum < m_tracksLimit)
@@ -202,22 +214,14 @@ void MainWindow::AddLayout()
         }
 
         // Tworzenie pokretla glosnosci na koncu tracku
-        QDial* newVolumeDial = new QDial();
-        newVolumeDial->setFixedSize(40, 40);
-        newVolumeDial->setMaximum(100);
-        newVolumeDial->setMinimum(0);
-        newVolumeDial->setValue(80);
+        QDial* newVolumeDial = CreateDial(80);
         m_volumeDials.push_back(newVolumeDial);
         newTrack->addWidget(newVolumeDial);
         // Polaczenie pokretla i jego indexu z opcja zmiany glosnosci tracku
-        connect(newVolumeDial, &QDial::valueChanged, [this, trackIndex, newVolumeDial](){ this->ChangeVolume(trackIndex, *newVolumeDial); });
+        connect(newVolumeDial, &QDial::valueChanged, [this, trackIndex](){ this->ChangeVolume(trackIndex); });
 
         // Adding the panning dial and connecting it
-        QDial* newPanningDial = new QDial();
-        newPanningDial->setFixedSize(40, 40);
-        newPanningDial->setMaximum(100);
-        newPanningDial->setMinimum(0);
-        newPanningDial->setValue(50);
+        QDial* newPanningDial = CreateDial(50);
         m_panningDials.push_back(newPanningDial);
         newTrack->addWidget(newPanningDial);
         connect(newPanningDial, &QDial::valueChanged, [this, trackIndex](){ this->SetPanning(trackIndex); });
@@ -415,11 +419,11 @@ void MainWindow::SetPlayPos()
     m_playPos = m_posSlider->value();
 }
 
-void MainWindow::ChangeVolume(unsigned int track, const QDial& volDial)
+void MainWindow::ChangeVolume(unsigned int track)
 {
     if(!m_mutedTracks[track])
     {
-        Mix_Volume(track, volDial.value());
+        Mix_Volume(track, m_volumeDials[track]->value());
     }
 }
 
@@ -428,7 +432,7 @@ void MainWindow::MuteTrack(unsigned int track)
     if(m_mutedTracks[track])
     {
         m_mutedTracks[track] = false;
-        ChangeVolume(track, *m_volumeDials[track]);
+        ChangeVolume(track);
         m_muteButtons[track]->setText("MUTE");
     }
     else
