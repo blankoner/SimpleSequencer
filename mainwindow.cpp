@@ -11,16 +11,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // basic window size and tracks numbers
-    m_width = 1100;
-    m_height = 100;
+    m_width = 1200;
+    m_height = 90;
     m_expandValue = 50;
     m_trackLength = 32;
     m_tracksInitNum = 4;
     m_tracksNum = 0;
     m_tracksLimit = 8;
     m_playPos = 0;
+    m_mutedTracks = new bool[m_tracksLimit];
 
-    m_playingWorker = new Worker("", 333);
+    m_playingWorker = new Worker("", 167);
     m_playingWorker->moveToThread(&m_playingThread);
 
     if(!InitAudio())
@@ -33,12 +34,13 @@ MainWindow::MainWindow(QWidget *parent)
     SetProgramBase();
 
     // Połączenie sygnału kliknięcia przycisku z slotem AddLayout
-    connect(addButton, &QPushButton::clicked, this, &MainWindow::AddLayout);
-    connect(delButton, &QPushButton::clicked, this, &MainWindow::DelLayout);
+    connect(m_addButton, &QPushButton::clicked, this, &MainWindow::AddLayout);
+    connect(m_delButton, &QPushButton::clicked, this, &MainWindow::DelLayout);
 
     // Polaczenia z workerem
-    connect(playButton, &QPushButton::clicked, this, [this](){ emit startPlaying(); m_playingThread.start(); });
-    connect(stopButton, &QPushButton::clicked, this, &MainWindow::Stop);
+    connect(m_playButton, &QPushButton::clicked, this, [this](){ emit startPlaying(); m_playingThread.start(); });
+    connect(m_pauseButton, &QPushButton::clicked, this, &MainWindow::Pause);
+    connect(m_stopButton, &QPushButton::clicked, this, &MainWindow::Stop);
     connect(this, &MainWindow::startPlaying, m_playingWorker, &Worker::Play);
     connect(m_playingWorker, &Worker::play, this, &MainWindow::Play);
     connect(m_playingWorker, &QThread::finished, m_playingWorker, &QObject::deleteLater);
@@ -47,11 +49,12 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    Mix_CloseAudio();
-    SDL_Quit();
-    delete m_playingWorker;
     m_playingThread.requestInterruption();
     m_playingThread.quit();
+    delete m_playingWorker;
+    delete [] m_mutedTracks;
+    Mix_CloseAudio();
+    SDL_Quit();
     delete ui;
 }
 
@@ -71,49 +74,69 @@ void MainWindow::AddPosSlider()
     m_posSlider->setValue(0);
     m_posSlider->setMaximum(m_trackLength);
     m_posSlider->setMinimum(0);
-    m_posSlider->setFixedWidth(840);
-    sliderLayout->addWidget(m_posSlider);
+    m_posSlider->setFixedWidth(m_trackLength*29.5);
+    sliderLayout->addSpacing(85);
+    sliderLayout->addWidget(m_posSlider, 0, Qt::AlignLeft);
+    sliderLayout->addStretch();
     connect(m_posSlider, &QSlider::valueChanged, [this](){ SetPlayPos(); });
+}
+
+void MainWindow::AddMenuButtons()
+{
+    m_addButton = new QPushButton("+", this);
+    m_addButton->setFixedSize(35, 20);
+
+    m_delButton = new QPushButton("-", this);
+    m_delButton->setFixedSize(35, 20);
+
+    m_playButton = new QPushButton("PLAY", this);
+    m_playButton->setFixedSize(50, 20);
+
+    m_pauseButton = new QPushButton("PAUSE", this);
+    m_pauseButton->setFixedSize(50, 20);
+
+    m_stopButton = new QPushButton("STOP", this);
+    m_stopButton->setFixedSize(50, 20);
+
+    topLayout->addWidget(m_addButton, 0, Qt::AlignLeft);
+    topLayout->addWidget(m_delButton, 0, Qt::AlignLeft);
+    topLayout->addStretch();
+    topLayout->addWidget(m_playButton);
+    topLayout->addWidget(m_pauseButton);
+    topLayout->addWidget(m_stopButton);
+    topLayout->addSpacing(m_width/3);
+}
+
+void MainWindow::AddBPMBox()
+{
+    m_bpmBox = new QSpinBox(this);
+    m_bpmBox->setMinimum(1);
+    m_bpmBox->setMaximum(360);
+    m_bpmBox->setValue(180);
+    m_bpmBox->setFixedSize(80, 25);
+    topLayout->addWidget(m_bpmBox, 0, Qt::AlignRight);
 }
 
 void MainWindow::SetProgramBase()
 {
-    // Tworzenie przyciskow z odpowiednim tekstem
-    addButton = new QPushButton("+", this);
-    addButton->setFixedSize(30, 20);
-
-    delButton = new QPushButton("-", this);
-    delButton->setFixedSize(30, 20);
-
-    playButton = new QPushButton("PLAY", this);
-    playButton->setFixedSize(50, 20);
-
-    stopButton = new QPushButton("STOP", this);
-    stopButton->setFixedSize(50, 20);
-
-    // Tworzenie BPMBoxa
-    m_bpmBox = new QSpinBox(this);
-    m_bpmBox->setMinimum(1);
-    m_bpmBox->setMaximum(360);
-    m_bpmBox->setValue(90);
-    m_bpmBox->setFixedSize(70, 20);
-
-    // Dodadnie posSlidera
+    // Dodadnie posSlidera do glownego layoutu
     AddPosSlider();
     mainLayout->addLayout(sliderLayout);
 
-    // Dodanie przyciskow do głównego layoutu
-    topLayout->addWidget(addButton);
-    topLayout->addWidget(delButton);
-    topLayout->addWidget(playButton);
-    topLayout->addWidget(stopButton);
-    topLayout->addWidget(m_bpmBox);
+    // Dodanie przyciskow i BPM boxa do głównego layoutu
+    AddMenuButtons();
+    AddBPMBox();
+    topLayout->setSpacing(10);
     mainLayout->addLayout(topLayout);
 
-    // Dodanie podstawowych trackow i wczytanie podstawowych dzwiekow
-    for(unsigned int i = 0; i < m_tracksInitNum; i++)
+    // Dodanie podstawowych trackow, odciszenie wszystkich mozliwych trackow i wczytanie podstawowych dzwiekow
+    for(unsigned int i = 0; i < m_tracksLimit; i++)
     {
-        AddLayout();
+        if(i < m_tracksInitNum)
+        {
+            AddLayout();
+        }
+        m_mutedTracks[i] = false;
     }
     LoadBasicSounds();
 }
@@ -163,6 +186,17 @@ void MainWindow::AddLayout()
         for(unsigned int i = 0; i < m_trackLength; i++)
         {
             QCheckBox* step = new QCheckBox("", this);
+            step->setFixedSize(16, 24);
+
+            if(i % 4 == 0)
+            {
+                step->setStyleSheet("QCheckBox { background-color: #999999; }");
+            }
+            else
+            {
+                step->setStyleSheet("QCheckBox { background-color: #cccccc; }");
+            }
+
             m_steps.push_back(step);
             newTrack->addWidget(step);
         }
@@ -175,9 +209,16 @@ void MainWindow::AddLayout()
         newVolumeDial->setValue(80);
         m_volumeDials.push_back(newVolumeDial);
         newTrack->addWidget(newVolumeDial);
-
         // Polaczenie pokretla i jego indexu z opcja zmiany glosnosci tracku
-        connect(newVolumeDial, &QDial::valueChanged, [trackIndex, newVolumeDial](){ Mix_Volume(trackIndex, newVolumeDial->value()); });
+        connect(newVolumeDial, &QDial::valueChanged, [this, trackIndex, newVolumeDial](){ this->ChangeVolume(trackIndex, *newVolumeDial); });
+
+        // Dodanie przycisku mute
+        QPushButton* newMuteButton = new QPushButton();
+        newMuteButton->setFixedSize(40, 20);
+        newMuteButton->setText("MUTE");
+        m_muteButtons.push_back(newMuteButton);
+        newTrack->addWidget(newMuteButton);
+        connect(newMuteButton, &QPushButton::clicked, [this, trackIndex](){ this->MuteTrack(trackIndex); });
 
         // Dodanie wewnętrznego układu do głównego layoutu
         mainLayout->addLayout(newTrack);
@@ -208,6 +249,10 @@ void MainWindow::ClearLayout(QLayout* layout)
     // deleting layout's vol dial
     delete m_volumeDials.back();
     m_volumeDials.pop_back();
+
+    // deleting the mute button
+    delete m_muteButtons.back();
+    m_muteButtons.pop_back();
 
     // deleting the layout from mainLayout and making the memory free
     QLayoutItem* item = mainLayout->takeAt(layoutIndex);
@@ -328,6 +373,13 @@ void MainWindow::Play()
     m_playPos++;
 }
 
+void MainWindow::Pause()
+{
+    m_playingThread.requestInterruption();
+    m_playingThread.quit();
+    Mix_HaltChannel(-1);
+}
+
 void MainWindow::Stop()
 {
     m_playingThread.requestInterruption();
@@ -347,4 +399,26 @@ void MainWindow::SetBPM()
 void MainWindow::SetPlayPos()
 {
     m_playPos = m_posSlider->value();
+}
+
+void MainWindow::ChangeVolume(unsigned int track, QDial& volDial)
+{
+    if(!m_mutedTracks[track])
+    {
+        Mix_Volume(track, volDial.value());
+    }
+}
+
+void MainWindow::MuteTrack(unsigned int track)
+{
+    if(m_mutedTracks[track])
+    {
+        m_mutedTracks[track] = false;
+        ChangeVolume(track, *m_volumeDials[track]);
+    }
+    else
+    {
+        m_mutedTracks[track] = true;
+        Mix_Volume(track, 0);
+    }
 }
