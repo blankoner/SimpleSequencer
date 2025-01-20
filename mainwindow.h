@@ -45,7 +45,7 @@ private:
     std::vector<QCheckBox*> m_steps;
     std::vector<QHBoxLayout*> m_tracks;
     std::vector<QPushButton*> m_soundButtons, m_muteButtons;
-    std::vector<QDial*> m_volumeDials;
+    std::vector<QDial*> m_volumeDials, m_panningDials;
     QVBoxLayout* mainLayout;
     QHBoxLayout* sliderLayout, *topLayout;
     QPushButton* m_addButton, *m_delButton, *m_playButton, *m_stopButton, *m_pauseButton;
@@ -81,9 +81,10 @@ private:
     void Pause();
     void Stop();
     void SetBPM();
-    void ChangeVolume(unsigned int track, QDial& volDial);
+    void ChangeVolume(unsigned int track, const QDial& volDial);
     void SetPlayPos();
     void MuteTrack(unsigned int track);
+    void SetPanning(unsigned int track);
 
     // workers
     Worker* m_playingWorker;

@@ -11,7 +11,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // basic window size and tracks numbers
-    m_width = 1200;
+    m_width = 1300;
     m_height = 90;
     m_expandValue = 50;
     m_trackLength = 32;
@@ -74,7 +74,7 @@ void MainWindow::AddPosSlider()
     m_posSlider->setValue(0);
     m_posSlider->setMaximum(m_trackLength);
     m_posSlider->setMinimum(0);
-    m_posSlider->setFixedWidth(m_trackLength*29.5);
+    m_posSlider->setFixedWidth(m_trackLength*27);
     sliderLayout->addSpacing(85);
     sliderLayout->addWidget(m_posSlider, 0, Qt::AlignLeft);
     sliderLayout->addStretch();
@@ -212,9 +212,19 @@ void MainWindow::AddLayout()
         // Polaczenie pokretla i jego indexu z opcja zmiany glosnosci tracku
         connect(newVolumeDial, &QDial::valueChanged, [this, trackIndex, newVolumeDial](){ this->ChangeVolume(trackIndex, *newVolumeDial); });
 
+        // Adding the panning dial and connecting it
+        QDial* newPanningDial = new QDial();
+        newPanningDial->setFixedSize(40, 40);
+        newPanningDial->setMaximum(100);
+        newPanningDial->setMinimum(0);
+        newPanningDial->setValue(50);
+        m_panningDials.push_back(newPanningDial);
+        newTrack->addWidget(newPanningDial);
+        connect(newPanningDial, &QDial::valueChanged, [this, trackIndex](){ this->SetPanning(trackIndex); });
+
         // Dodanie przycisku mute
         QPushButton* newMuteButton = new QPushButton();
-        newMuteButton->setFixedSize(40, 20);
+        newMuteButton->setFixedSize(60, 20);
         newMuteButton->setText("MUTE");
         m_muteButtons.push_back(newMuteButton);
         newTrack->addWidget(newMuteButton);
@@ -249,6 +259,9 @@ void MainWindow::ClearLayout(QLayout* layout)
     // deleting layout's vol dial
     delete m_volumeDials.back();
     m_volumeDials.pop_back();
+
+    delete m_panningDials.back();
+    m_panningDials.pop_back();
 
     // deleting the mute button
     delete m_muteButtons.back();
@@ -324,6 +337,7 @@ void MainWindow::PlayChannel(int channel)
     {
         int playingChannel = 0;
         playingChannel = Mix_PlayChannel(channel, m_sounds[channel], 0);
+        SetPanning(channel);
     }
 }
 
@@ -401,7 +415,7 @@ void MainWindow::SetPlayPos()
     m_playPos = m_posSlider->value();
 }
 
-void MainWindow::ChangeVolume(unsigned int track, QDial& volDial)
+void MainWindow::ChangeVolume(unsigned int track, const QDial& volDial)
 {
     if(!m_mutedTracks[track])
     {
@@ -415,10 +429,26 @@ void MainWindow::MuteTrack(unsigned int track)
     {
         m_mutedTracks[track] = false;
         ChangeVolume(track, *m_volumeDials[track]);
+        m_muteButtons[track]->setText("MUTE");
     }
     else
     {
         m_mutedTracks[track] = true;
         Mix_Volume(track, 0);
+        m_muteButtons[track]->setText("UNMUTE");
+    }
+}
+
+void MainWindow::SetPanning(unsigned int track)
+{
+    int panValue = abs(50 - m_panningDials[track]->value());
+    int step = 255/50;
+    if(m_panningDials[track]->value() > 50)
+    {
+        Mix_SetPanning(track, 255 - (panValue * step), 255);
+    }
+    else
+    {
+        Mix_SetPanning(track, 255, 255 - (panValue * step));
     }
 }
