@@ -19,6 +19,7 @@
 #include <QDebug>
 #include <QSpinBox>
 #include <QSlider>
+#include <QResource>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -77,7 +78,7 @@ private:
     void LoadBasicSounds();
     void PlayChannel(int channel);
     void MountTrack(unsigned int track);
-    void SetTrackName(unsigned int track, QString path);
+    void SetTrackName(unsigned int track, const QString& path);
     void Play();
     void Pause();
     void Stop();
@@ -86,6 +87,7 @@ private:
     void SetPlayPos();
     void MuteTrack(unsigned int track);
     void SetPanning(unsigned int track);
+    Mix_Chunk* LoadWAVFromQRC(const QString& path);
 
     // workers
     Worker* m_playingWorker;

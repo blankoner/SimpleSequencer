@@ -14,12 +14,15 @@
    <string>MainWindow</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QCheckBox::indicator:unchecked{
-	image: url(:/icon/QCheckBox-unchecked.png);
+   <string notr="true">QCheckBox::indicator:checked
+{
+	image: url(:/resources/icons/QCheckBox-checked.png);
 }
 
-QCheckBox::indicator:checked{
-	image: url(:/icon/QCheckBox-checked.png);
+QCheckBox::indicator:unchecked
+{
+	
+	image: url(:/resources/icons/QCheckBox-unchecked.png);
 }</string>
   </property>
   <widget class="QWidget" name="centralwidget"/>

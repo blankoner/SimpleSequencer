@@ -143,22 +143,55 @@ void MainWindow::SetProgramBase()
     LoadBasicSounds();
 }
 
+Mix_Chunk* MainWindow::LoadWAVFromQRC(const QString& path)
+{
+    // Open the resource file
+    QResource resource(path);
+
+    if(!resource.isValid())
+    {
+        return nullptr;
+    }
+
+    // Get the data and size of the resource file
+    const uchar* data = resource.data();
+    int size = resource.size();
+
+    if(!data || size <= 0)
+    {
+        return nullptr;
+    }
+
+    // Load the data into the SDL_RWops
+    SDL_RWops* rwops = SDL_RWFromConstMem(data, size);
+
+    if(!rwops)
+    {
+        return nullptr;
+    }
+
+    // Load the data to Mix_Chunk and return it
+    Mix_Chunk* sound = Mix_LoadWAV_RW(rwops, 1);
+
+    return sound;
+}
+
 void MainWindow::LoadBasicSounds()
 {
-    const char* path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Kicks/Bck_K1.wav";
-    m_sounds[0] = Mix_LoadWAV(path);
+    const char* path = ":/resources/sounds/808-bassdrum.wav";
+    m_sounds[0] = LoadWAVFromQRC(path);
     SetTrackName(0, path);
 
-    path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Hi-Hats/Bck_H.wav";
-    m_sounds[1] = Mix_LoadWAV(path);
+    path = ":/resources/sounds/808-hihat.wav";
+    m_sounds[1] = LoadWAVFromQRC(path);
     SetTrackName(1, path);
 
-    path = "/home/marceltracz/music/ft2/SAMPLES/9th_wonder_drum_kit/Snares/Bck_Snr.wav";
-    m_sounds[2] = Mix_LoadWAV(path);
+    path = ":/resources/sounds/808-clap.wav";
+    m_sounds[2] = LoadWAVFromQRC(path);
     SetTrackName(2, path);
 
-    path = "/home/marceltracz/music/ft2/SAMPLES/Blu Mar Ten - Jungle Jungle/Pads/God Chord Pad.wav";
-    m_sounds[3] = Mix_LoadWAV(path);
+    path = ":/resources/sounds/pad.wav";
+    m_sounds[3] = LoadWAVFromQRC(path);
     SetTrackName(3, path);
 }
 
@@ -202,7 +235,7 @@ void MainWindow::AddLayout()
 
             if(i % 4 == 0)
             {
-                step->setStyleSheet("QCheckBox { background-color: #999999; }");
+                step->setStyleSheet("QCheckBox { background-color: #ffffff; }");
             }
             else
             {
@@ -360,7 +393,7 @@ void MainWindow::MountTrack(unsigned int track)
     SetTrackName(track, filePath);
 }
 
-void MainWindow::SetTrackName(unsigned int track, QString path)
+void MainWindow::SetTrackName(unsigned int track, const QString& path)
 {
     QFileInfo fileInfo(path);
     QString name = fileInfo.baseName();

@@ -31,13 +31,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 DISTFILES += \
-    808-hihat.wav \
-    icons/QCheckBox-checked.png \
-    icons/QCheckBox-unchecked.png \
-    sounds/808-bassdrum.wav \
-    sounds/808-clap.wav \
-    sounds/808-hihat.wav \
-    stylesheets/stylesheet.qss
+    808-hihat.wav
 
 RESOURCES += \
-    icons/resource.qrc
+    resource.qrc
