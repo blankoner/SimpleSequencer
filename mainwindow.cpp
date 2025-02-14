@@ -76,8 +76,8 @@ void MainWindow::AddPosSlider()
     m_posSlider->setValue(0);
     m_posSlider->setMaximum(m_trackLength);
     m_posSlider->setMinimum(0);
-    m_posSlider->setFixedWidth(m_trackLength*27);
-    sliderLayout->addSpacing(85);
+    m_posSlider->setFixedWidth(m_trackLength*30 + 20);
+    sliderLayout->addSpacing(100);
     sliderLayout->addWidget(m_posSlider, 0, Qt::AlignLeft);
     sliderLayout->addStretch();
     connect(m_posSlider, &QSlider::valueChanged, [this](){ SetPlayPos(); });
@@ -106,7 +106,22 @@ void MainWindow::AddMenuButtons()
     topLayout->addWidget(m_playButton);
     topLayout->addWidget(m_pauseButton);
     topLayout->addWidget(m_stopButton);
-    topLayout->addSpacing(m_width/3);
+    topLayout->addSpacing(m_trackLength * 15);
+}
+
+void MainWindow::AddMenuLabels()
+{
+    QLabel* volLabel = new QLabel(this);
+    volLabel->setText("Vol.");
+    topLayout->addWidget(volLabel);
+
+    topLayout->addSpacing(20);
+
+    QLabel* panLabel = new QLabel(this);
+    panLabel->setText("Pan.");
+    topLayout->addWidget(panLabel);
+
+    topLayout->addSpacing(20);
 }
 
 void MainWindow::AddBPMBox()
@@ -115,7 +130,7 @@ void MainWindow::AddBPMBox()
     m_bpmBox->setMinimum(1);
     m_bpmBox->setMaximum(360);
     m_bpmBox->setValue(180);
-    m_bpmBox->setFixedSize(80, 25);
+    m_bpmBox->setFixedSize(60, 25);
     topLayout->addWidget(m_bpmBox, 0, Qt::AlignRight);
 }
 
@@ -127,8 +142,10 @@ void MainWindow::SetProgramBase()
 
     // Dodanie przyciskow i BPM boxa do głównego layoutu
     AddMenuButtons();
+    AddMenuLabels();
     AddBPMBox();
     topLayout->setSpacing(10);
+    topLayout->setMargin(10);
     mainLayout->addLayout(topLayout);
 
     // Dodanie podstawowych trackow, odciszenie wszystkich mozliwych trackow i wczytanie podstawowych dzwiekow
@@ -235,7 +252,7 @@ void MainWindow::AddLayout()
 
             if(i % 4 == 0)
             {
-                step->setStyleSheet("QCheckBox { background-color: #ffffff; }");
+                step->setStyleSheet("QCheckBox { background-color: #aaaaaa; }");
             }
             else
             {

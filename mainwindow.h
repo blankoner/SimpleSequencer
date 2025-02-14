@@ -20,6 +20,7 @@
 #include <QSpinBox>
 #include <QSlider>
 #include <QResource>
+#include <QLabel>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -57,6 +58,7 @@ private:
     void SetWindowProperties();
     void AddPosSlider();
     void AddMenuButtons();
+    void AddMenuLabels();
     void AddBPMBox();
     void SetProgramBase();
     void AddLayout();
